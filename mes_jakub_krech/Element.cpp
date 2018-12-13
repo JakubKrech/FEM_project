@@ -14,13 +14,13 @@
 #define     K_transX_transY_det_debug_logging 0
 #define                matrix_H_debug_logging 1
 
-#define				c_ro_NN_det_debug_logging 0
+#define             c_ro_NN_det_debug_logging 0
 #define                matrix_C_debug_logging 1
 
-#define		 calculate_pow_pc_N_debug_logging 0
-#define		   calculate_pow_pc_debug_logging 0
-#define		  calculate_pow_sum_debug_logging 0
-#define	  calculate_Matrix_H_BC_debug_logging 1
+#define      calculate_pow_pc_N_debug_logging 0
+#define        calculate_pow_pc_debug_logging 0
+#define       calculate_pow_sum_debug_logging 0
+#define   calculate_Matrix_H_BC_debug_logging 1
 
 #define ksi_global 1/sqrt(3)
 #define eta_global 1/sqrt(3)
