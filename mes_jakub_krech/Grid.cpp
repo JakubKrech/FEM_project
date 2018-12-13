@@ -7,14 +7,21 @@
 
 #define shape_function_derivatives_logging 0
 
+#define initial_temp 100
+#define simulation_step_time 50
+#define simulation_time 500
+
 Grid::Grid(double H, double L, int nH, int nL) {
 
-	for (int i = 0; i < nL; i++) {
-		for (int j = 0; j < nH; j++) {
-			if (i == 0 || i == nL - 1 || j == 0 || j == nH - 1)
-				nodes.push_back(new Node{ L*i, H*j, true });
+	double H_step = H / (nH - 1);
+	double L_step = L / (nL - 1);
+
+	for (double i = 0; i <= L; i += H_step) {
+		for (double j = 0; j <= H; j += L_step) {
+			if (i == 0 || i == H || j == 0 || j == L)
+				nodes.push_back(new Node{ i, j, true, initial_temp });
 			else
-				nodes.push_back(new Node{ L*i, H*j, false });
+				nodes.push_back(new Node{ i, j, false, initial_temp });
 		}
 	}
 
@@ -40,6 +47,9 @@ Grid::Grid(double H, double L, int nH, int nL) {
 			elements.push_back(el);
 		}
 	}
+	calculate_global_matrix_H();
+	calculate_global_matrix_C();
+	calculate_global_matrix_P();
 }
 
 Grid::~Grid()
@@ -187,4 +197,99 @@ Eigen::Matrix<double, 4, 4> Grid::calculateShapeFunctionDerivativesToEta(Node*, 
 void Grid::print_shape_function_derivatives()
 {
 	std::cout << "\nShapeFunctionDerivativestoKsi\n" << ShFnDerivativesToKsi << "\nShapeFunctionDerivativestoEta\n" << ShFnDerivativesToEta << "\n";
+}
+
+void Grid::calculate_global_matrix_H()
+{
+	for (const auto &x : elements) {
+		Eigen::Vector4i ID = { x->Nodes[0]->id, x->Nodes[1]->id, x->Nodes[2]->id, x->Nodes[3]->id };
+		//std::cout << "TEST " << ID(0) << " " << ID(1) << " " << ID(2) << " " << ID(3) << " " << "\n";
+
+		for (int i = 0; i < matrix_size; i++) {
+			for (int j = 0; j < matrix_size; j++) {
+				Global_Matrix_H(ID(i) - 1, ID(j) - 1) += x->Matrix_H_Final(i, j);
+			}
+		}
+	}
+}
+
+void Grid::print_global_matrix_H()
+{
+	std::cout << "----------------Global_Matrix_H--------------- \n" <<
+		std::fixed << Global_Matrix_H <<
+		"\n----------------------------------------------\n\n";
+}
+
+void Grid::calculate_global_matrix_C()
+{
+	for (const auto &x : elements) {
+		Eigen::Vector4i ID = { x->Nodes[0]->id, x->Nodes[1]->id, x->Nodes[2]->id, x->Nodes[3]->id };
+		//std::cout << "TEST " << ID(0) << " " << ID(1) << " " << ID(2) << " " << ID(3) << " " << "\n";
+
+		for (int i = 0; i < matrix_size; i++) {
+			for (int j = 0; j < matrix_size; j++) {
+				Global_Matrix_C(ID(i) - 1, ID(j) - 1) += x->Matrix_C(i, j); //(x->Matrix_C(i, j)/(matrix_size*2.25));
+			}
+		}
+	}
+}
+
+void Grid::print_global_matrix_C()
+{
+	std::cout << "----------------Global_Matrix_C--------------- \n" <<
+		std::fixed << Global_Matrix_C <<
+		"\n----------------------------------------------\n\n";
+}
+
+void Grid::calculate_global_matrix_P()
+{
+	for (const auto &x : elements) {
+		Eigen::Vector4i ID = { x->Nodes[0]->id, x->Nodes[1]->id, x->Nodes[2]->id, x->Nodes[3]->id };
+		for (int i = 0; i < matrix_size; i++) {
+			Global_Matrix_P(ID(i) - 1) += x->Matrix_P(i);
+		}
+	}
+}
+
+void Grid::print_global_matrix_P()
+{
+	std::cout << "----------------Global_Matrix_P--------------- \n" <<
+		std::fixed << Global_Matrix_P <<
+		"\n----------------------------------------------\n\n";
+}
+
+void Grid::calculate_next_iterations(int iterations)
+{
+	std::vector<double> temps( 16, initial_temp );
+
+	for (int x = 1; x <= iterations; x++) {
+
+		std::cout << "<<<<< ITERATION " << x - 1 << ", time " << x*simulation_step_time<< " >>>>>\n\n";
+
+		Eigen::Matrix<double, matrix_size*matrix_size, matrix_size*matrix_size> tempH = Global_Matrix_H + Global_Matrix_C / (simulation_step_time);
+
+		std::cout << "--------------Matrix ([H]+[C]/dT)------------- \n" <<
+			std::fixed << tempH <<
+			"\n----------------------------------------------\n\n";
+
+		Eigen::Matrix<double, 16, 1> tempP = Global_Matrix_P;
+		for (int i = 0; i < matrix_size*matrix_size; i++) {
+			for (int j = 0; j < matrix_size*matrix_size; j++) {
+				tempP(i) += ((Global_Matrix_C(i, j) / (simulation_step_time)) * temps[j]);
+			}
+		}
+
+		std::cout << "-----------Matrix ([{P}+{[C]/dT}*{T0})--------- \n" <<
+			std::fixed << tempP <<
+			"\n----------------------------------------------\n\n";
+
+		Eigen::Matrix<double, 16, 1> new_temps = tempH.inverse() * tempP;
+
+		std::cout << "TEMPERATURES\n";
+		for (int i = 0; i < matrix_size*matrix_size; i++) {
+			temps[i] = new_temps(i);
+			std::cout << temps[i] << " ";
+		}
+		std::cout << "\n\n\n";
+	}
 }

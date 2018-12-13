@@ -83,7 +83,15 @@ public:
 	Eigen::Matrix<double, matrix_size, matrix_size> pow3_sum;
 	Eigen::Matrix<double, matrix_size, matrix_size> pow4_sum;
 
+	Eigen::Vector4d pow1_P;
+	Eigen::Vector4d pow2_P;
+	Eigen::Vector4d pow3_P;
+	Eigen::Vector4d pow4_P;
+
+	Eigen::Vector4d Matrix_P;
+
 	Eigen::Matrix<double, matrix_size, matrix_size> Matrix_H_BC;
+	Eigen::Matrix<double, matrix_size, matrix_size> Matrix_H_Final;
 
 
 	Element(Node *a, Node *b, Node *c, Node *d,
@@ -110,8 +118,11 @@ public:
 
 	void calculate_pow_pc_N();
 	void calculate_pow_pc();
-	void calculate_pow_sum();
+	void calculate_pow_sum_and_pow_P();
+	void calculate_Matrix_P();
+
 	void calculate_Matrix_H_BC();
+	void calculate_Matrix_H_Final();
 
 	void print();
 };

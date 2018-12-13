@@ -3,31 +3,35 @@
 #include <cmath>
 #include <iomanip>
 
-#define shape_and_interpolation_debug_logging 0
-#define     jacobian_matrix_one_debug_logging 0
-#define            jacobian_det_debug_logging 0
-#define         jacobian_matrix_debug_logging 0
+#define  shape_and_interpolation_debug_logging 0
+#define      jacobian_matrix_one_debug_logging 0
+#define             jacobian_det_debug_logging 0
+#define          jacobian_matrix_debug_logging 0
 
-#define                   dn_dx_debug_logging 0
-#define                   dn_dy_debug_logging 0
-#define              transponed_debug_logging 0
-#define     K_transX_transY_det_debug_logging 0
-#define                matrix_H_debug_logging 1
+#define                    dn_dx_debug_logging 0
+#define                    dn_dy_debug_logging 0
+#define               transponed_debug_logging 0
+#define      K_transX_transY_det_debug_logging 0
+#define                 matrix_H_debug_logging 0
 
-#define             c_ro_NN_det_debug_logging 0
-#define                matrix_C_debug_logging 1
+#define              c_ro_NN_det_debug_logging 0
+#define                 matrix_C_debug_logging 0
 
-#define      calculate_pow_pc_N_debug_logging 0
-#define        calculate_pow_pc_debug_logging 0
-#define       calculate_pow_sum_debug_logging 0
-#define   calculate_Matrix_H_BC_debug_logging 1
+#define       calculate_pow_pc_N_debug_logging 0
+#define         calculate_pow_pc_debug_logging 0
+#define        calculate_pow_sum_debug_logging 0
+#define          calculate_pow_P_debug_logging 1
+#define    calculate_Matrix_H_BC_debug_logging 0
+#define       calculate_Matrix_P_debug_logging 1
+#define calculate_Matrix_H_Final_debug_logging 0
 
 #define ksi_global 1/sqrt(3)
 #define eta_global 1/sqrt(3)
-#define conductivity 30 //przewodnictwo
+#define conductivity 25 //przewodnictwo 30
 #define specific_heat 700 //cieplo wlasciwe
-#define ro 7800 //gestosc
-#define convection 25 //konwekcja (alfa)
+#define ro 7800 //gestosc/density
+#define convection 300 //konwekcja (alfa) 25
+#define ambient_temp 1200
 
 Element::Element(
 	Node *a,
@@ -66,8 +70,11 @@ Element::Element(
 
 	calculate_pow_pc_N();
 	calculate_pow_pc();
-	calculate_pow_sum();
+	calculate_pow_sum_and_pow_P();
+	calculate_Matrix_P();
 	calculate_Matrix_H_BC();
+	
+	calculate_Matrix_H_Final();
 }
 
 Element::~Element()
@@ -83,7 +90,12 @@ void Element::print()
 		Nodes[0]->id << "," <<
 		Nodes[1]->id << "," <<
 		Nodes[2]->id << "," <<
-		Nodes[3]->id << ")\n\n";
+		Nodes[3]->id << ")  BC: ";
+	if (Nodes[0]->BC && Nodes[1]->BC) std::cout << "pow1 ";
+	if (Nodes[1]->BC && Nodes[2]->BC) std::cout << "pow2 ";
+	if (Nodes[2]->BC && Nodes[3]->BC) std::cout << "pow3 ";
+	if (Nodes[3]->BC && Nodes[0]->BC) std::cout << "pow4 ";
+	std::cout << "\n\n";
 
 	if (shape_and_interpolation_debug_logging) {	
 		for (int i = 0; i < ShapeFunctions.size(); i++) {
@@ -203,7 +215,7 @@ void Element::print()
 
 	if (matrix_C_debug_logging)
 	{
-		std::cout << "-------------------Matrix C------------------- \n" <<
+		std::cout << "-------------------Matrix C-------------------\n" <<
 			std::fixed << Matrix_C <<
 			"\n----------------------------------------------\n\n";
 	}
@@ -266,6 +278,8 @@ void Element::print()
 			std::fixed << pow4_pc2 << "\n\n";
 	}
 
+	
+
 	if (calculate_pow_sum_debug_logging)
 	{
 		std::cout << " -- pow_sum --\n\n";
@@ -287,6 +301,38 @@ void Element::print()
 	{
 		std::cout << "---------Matrix H Boundary Conditions--------- \n" <<
 			std::fixed << Matrix_H_BC <<
+			"\n----------------------------------------------\n\n";
+	}
+
+	if (calculate_pow_P_debug_logging)
+	{
+		std::cout << " -- pow_P --\n\n";
+
+		std::cout << "  --pow1_P-- \n" <<
+			std::fixed << pow1_P << "\n\n";
+
+		std::cout << "  --pow2_P-- \n" <<
+			std::fixed << pow2_P << "\n\n";
+
+		std::cout << "  --pow3_P-- \n" <<
+			std::fixed << pow3_P << "\n\n";
+
+		std::cout << "  --pow4_P-- \n" <<
+			std::fixed << pow4_P << "\n\n";
+	}
+
+
+	if (calculate_Matrix_P_debug_logging)
+	{
+		std::cout << "-------------------Matrix P-------------------\n" <<
+			std::fixed << Matrix_P <<
+			"\n----------------------------------------------\n\n";
+	}
+
+	if (calculate_Matrix_H_Final_debug_logging)
+	{
+		std::cout << "----------------Matrix H Final---------------- \n" <<
+			std::fixed << Matrix_H_Final <<
 			"\n----------------------------------------------\n\n";
 	}
 }
@@ -616,7 +662,7 @@ void Element::calculate_pow_pc()
 	}
 }
 
-void Element::calculate_pow_sum()
+void Element::calculate_pow_sum_and_pow_P()
 {
 	double pow1_detJ = (Nodes[1]->x - Nodes[0]->x) / 2;
 	double pow2_detJ = (Nodes[2]->y - Nodes[1]->y) / 2;
@@ -629,17 +675,30 @@ void Element::calculate_pow_sum()
 		{
 			if (Nodes[0]->BC == true && Nodes[1]->BC == true) {
 				pow1_sum(i, j) = (pow1_pc1(i, j) + pow1_pc2(i, j))*pow1_detJ;
+				pow1_P(i) += ambient_temp * (pow1_pc1(i, j) + pow1_pc2(i, j)) * pow1_detJ;
 			}
 			if (Nodes[1]->BC == true && Nodes[2]->BC == true) {
 				pow2_sum(i, j) = (pow2_pc1(i, j) + pow2_pc2(i, j))*pow2_detJ;
+				pow2_P(i) += ambient_temp * (pow2_pc1(i, j) + pow2_pc2(i, j)) * pow2_detJ;
 			}
 			if (Nodes[2]->BC == true && Nodes[3]->BC == true) {
 				pow3_sum(i, j) = (pow3_pc1(i, j) + pow3_pc2(i, j))*pow3_detJ;
+				pow3_P(i) += ambient_temp * (pow3_pc1(i, j) + pow3_pc2(i, j)) * pow3_detJ;
 			}
 			if (Nodes[3]->BC == true && Nodes[0]->BC == true) {
 				pow4_sum(i, j) = (pow4_pc1(i, j) + pow4_pc2(i, j))*pow4_detJ;
+				pow4_P(i) += ambient_temp * (pow4_pc1(i, j) + pow4_pc2(i, j)) * pow4_detJ;
 			}
 		}
+	}
+}
+
+void Element::calculate_Matrix_P()
+{
+	for (int i = 0; i < matrix_size; i++)
+	{
+		Matrix_P(i) = pow1_P(i) + pow2_P(i) +
+			pow3_P(i) + pow4_P(i);
 	}
 }
 
@@ -653,4 +712,9 @@ void Element::calculate_Matrix_H_BC()
 				pow3_sum(i, j) + pow4_sum(i, j);
 		}
 	}
+}
+
+void Element::calculate_Matrix_H_Final()
+{
+	Matrix_H_Final = Matrix_H + Matrix_H_BC;
 }

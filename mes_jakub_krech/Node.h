@@ -4,11 +4,11 @@ class Node
 {
 public:
 	static int global_id;
-	int id;
-	double x, y, t0;
+	int id, temperature;
+	double x, y;
 	bool BC;
 
-	Node(double, double, bool);
+	Node(double, double, bool, int);
 	~Node();
 
 	void print();
