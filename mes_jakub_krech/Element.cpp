@@ -20,16 +20,16 @@
 #define       calculate_pow_pc_N_debug_logging 0
 #define         calculate_pow_pc_debug_logging 0
 #define        calculate_pow_sum_debug_logging 0
-#define          calculate_pow_P_debug_logging 1
+#define          calculate_pow_P_debug_logging 0
 #define    calculate_Matrix_H_BC_debug_logging 0
-#define       calculate_Matrix_P_debug_logging 1
+#define       calculate_Matrix_P_debug_logging 0
 #define calculate_Matrix_H_Final_debug_logging 0
 
 #define ksi_global 1/sqrt(3)
 #define eta_global 1/sqrt(3)
 #define conductivity 25 //przewodnictwo 30
 #define specific_heat 700 //cieplo wlasciwe
-#define ro 7800 //gestosc/density
+#define density 7800 //gestosc/density
 #define convection 300 //konwekcja (alfa) 25
 #define ambient_temp 1200
 
@@ -53,10 +53,10 @@ Element::Element(
 
 	id = global_id++;
 
-	calculateInterpolationForEachNode();
-	calculateJacobianMatrixOne();
-	calculateJacobianDet();
+	//calculateInterpolationForEachNode();
 	calculateJacobianMatrix();
+	calculateJacobianDet();
+	calculateInverseJacobianMatrix();
 
 	calculate_dn_dx();
 	calculate_dn_dy();
@@ -97,7 +97,7 @@ void Element::print()
 	if (Nodes[3]->BC && Nodes[0]->BC) std::cout << "pow4 ";
 	std::cout << "\n\n";
 
-	if (shape_and_interpolation_debug_logging) {	
+	/*if (shape_and_interpolation_debug_logging) {	
 		for (int i = 0; i < ShapeFunctions.size(); i++) {
 			std::cout << "  --Node #" << Nodes[i]->id << "--\n" <<
 				"   N1: " << ShapeFunctions[i]->N(0) <<
@@ -106,11 +106,11 @@ void Element::print()
 				" N4: " << ShapeFunctions[i]->N(3) <<
 				"\n   InterpolationCoordinates: (" << InterpolCoord[i]->x << ", " << InterpolCoord[i]->y << ")\n\n";
 		}
-	}
+	}*/
 
 	if (jacobian_matrix_one_debug_logging) {
-		std::cout << "  --Jacobian Matrix One-- \n" <<
-			std::fixed << JacobianMatrixOne << "\n\n";
+		std::cout << "  --Jacobian Matrix-- \n" <<
+			std::fixed << JacobianMatrix << "\n\n";
 	}
 	
 	if (jacobian_det_debug_logging)
@@ -126,8 +126,8 @@ void Element::print()
 	
 	if (jacobian_matrix_debug_logging)
 	{
-		std::cout << "  --Jacobian Matrix-- \n" << 
-			std::fixed << JacobianMatrix << "\n\n";
+		std::cout << "  --Inverse Jacobian Matrix-- \n" << 
+			std::fixed << InverseJacobianMatrix << "\n\n";
 	}
 	
 	if (dn_dx_debug_logging)
@@ -337,7 +337,7 @@ void Element::print()
 	}
 }
 
-void Element::calculateInterpolationForEachNode()
+/*void Element::calculateInterpolationForEachNode()
 {
 	double Xp = ShapeFunctions[0]->N(0) * Nodes[0]->x +
 		ShapeFunctions[0]->N(1) * Nodes[1]->x +
@@ -382,28 +382,28 @@ void Element::calculateInterpolationForEachNode()
 		ShapeFunctions[3]->N(3) * Nodes[3]->y;
 	InterpolationCoordinates *intcoor3 = new InterpolationCoordinates(Xp, Yp);
 	InterpolCoord.push_back(intcoor3);
-}
+}*/
 
-void Element::calculateJacobianMatrixOne()
+void Element::calculateJacobianMatrix()
 {
 	for (int i = 0; i < matrix_size; i++)
 	{
-		JacobianMatrixOne(0,i) = ShapeFunctionsDerivativesToKsi(0, i) * Nodes[0]->x +
+		JacobianMatrix(0,i) = ShapeFunctionsDerivativesToKsi(0, i) * Nodes[0]->x +
 			ShapeFunctionsDerivativesToKsi(1, i) * Nodes[1]->x +
 			ShapeFunctionsDerivativesToKsi(2, i) * Nodes[2]->x +
 			ShapeFunctionsDerivativesToKsi(3, i) * Nodes[3]->x;
 
-		JacobianMatrixOne(1, i) = ShapeFunctionsDerivativesToKsi(0, i) * Nodes[0]->y +
+		JacobianMatrix(1, i) = ShapeFunctionsDerivativesToKsi(0, i) * Nodes[0]->y +
 			ShapeFunctionsDerivativesToKsi(1, i) * Nodes[1]->y +
 			ShapeFunctionsDerivativesToKsi(2, i) * Nodes[2]->y +
 			ShapeFunctionsDerivativesToKsi(3, i) * Nodes[3]->y;
 
-		JacobianMatrixOne(2, i) = ShapeFunctionsDerivativesToEta(0, i) * Nodes[0]->x +
+		JacobianMatrix(2, i) = ShapeFunctionsDerivativesToEta(0, i) * Nodes[0]->x +
 			ShapeFunctionsDerivativesToEta(1, i) * Nodes[1]->x +
 			ShapeFunctionsDerivativesToEta(2, i) * Nodes[2]->x +
 			ShapeFunctionsDerivativesToEta(3, i) * Nodes[3]->x;
 
-		JacobianMatrixOne(3, i) = ShapeFunctionsDerivativesToEta(0, i) * Nodes[0]->y +
+		JacobianMatrix(3, i) = ShapeFunctionsDerivativesToEta(0, i) * Nodes[0]->y +
 			ShapeFunctionsDerivativesToEta(1, i) * Nodes[1]->y +
 			ShapeFunctionsDerivativesToEta(2, i) * Nodes[2]->y +
 			ShapeFunctionsDerivativesToEta(3, i) * Nodes[3]->y;
@@ -414,20 +414,20 @@ void Element::calculateJacobianDet()
 {
 	for (int i = 0; i < matrix_size; i++)
 	{
-		JacobianDet(i) = JacobianMatrixOne(0, i) * JacobianMatrixOne(3, i) -
-			JacobianMatrixOne(1, i) * JacobianMatrixOne(2, i);
+		JacobianDet(i) = JacobianMatrix(0, i) * JacobianMatrix(3, i) -
+			JacobianMatrix(1, i) * JacobianMatrix(2, i);
 	}
 	
 }
 
-void Element::calculateJacobianMatrix()
+void Element::calculateInverseJacobianMatrix()
 {
 	for (int i = 0; i < matrix_size; i++)
 	{
-		JacobianMatrix(0,i) = JacobianMatrixOne(3,i) / JacobianDet(i);
-		JacobianMatrix(1,i) = -(JacobianMatrixOne(2,i) / JacobianDet(i));
-		JacobianMatrix(2,i) = JacobianMatrixOne(1,i) / JacobianDet(i);
-		JacobianMatrix(3,i) = JacobianMatrixOne(0,i) / JacobianDet(i);   //TEORETYCZNIE TU JEST B£¥D, MA BYC MINUS JAK W DRUGIEJ LINII
+		InverseJacobianMatrix(0,i) = JacobianMatrix(3,i) / JacobianDet(i);
+		InverseJacobianMatrix(1,i) = -(JacobianMatrix(2,i) / JacobianDet(i));
+		InverseJacobianMatrix(2,i) = JacobianMatrix(1,i) / JacobianDet(i);
+		InverseJacobianMatrix(3,i) = JacobianMatrix(0,i) / JacobianDet(i);   // 
 	}
 }
 
@@ -435,17 +435,17 @@ void Element::calculate_dn_dx()
 {
 	for (int i = 0; i < matrix_size; i++)
 	{
-		dN_dx(0,i) = JacobianMatrix(0,0) * ShapeFunctionsDerivativesToKsi(i,0) +
-			JacobianMatrix(1,0) * ShapeFunctionsDerivativesToEta(i,0);
+		dN_dx(0,i) = InverseJacobianMatrix(0,0) * ShapeFunctionsDerivativesToKsi(i,0) +
+			InverseJacobianMatrix(1,0) * ShapeFunctionsDerivativesToEta(i,0);
 
-		dN_dx(1,i) = JacobianMatrix(0,1) * ShapeFunctionsDerivativesToKsi(i,1) +
-			JacobianMatrix(1,1) * ShapeFunctionsDerivativesToEta(i,1);
+		dN_dx(1,i) = InverseJacobianMatrix(0,1) * ShapeFunctionsDerivativesToKsi(i,1) +
+			InverseJacobianMatrix(1,1) * ShapeFunctionsDerivativesToEta(i,1);
 
-		dN_dx(2,i) = JacobianMatrix(0,2) * ShapeFunctionsDerivativesToKsi(i,2) +
-			JacobianMatrix(1,2) * ShapeFunctionsDerivativesToEta(i,2);
+		dN_dx(2,i) = InverseJacobianMatrix(0,2) * ShapeFunctionsDerivativesToKsi(i,2) +
+			InverseJacobianMatrix(1,2) * ShapeFunctionsDerivativesToEta(i,2);
 
-		dN_dx(3,i) = JacobianMatrix(0,3) * ShapeFunctionsDerivativesToKsi(i,3) +
-			JacobianMatrix(1,3) * ShapeFunctionsDerivativesToEta(i,3);
+		dN_dx(3,i) = InverseJacobianMatrix(0,3) * ShapeFunctionsDerivativesToKsi(i,3) +
+			InverseJacobianMatrix(1,3) * ShapeFunctionsDerivativesToEta(i,3);
 	}
 }
 
@@ -453,17 +453,17 @@ void Element::calculate_dn_dy()
 {
 	for (int i = 0; i < matrix_size; i++)
 	{
-		dN_dy(0,i) = JacobianMatrix(2,0) * ShapeFunctionsDerivativesToKsi(i,0) +
-			JacobianMatrix(3,0) * ShapeFunctionsDerivativesToEta(i,0);
+		dN_dy(0,i) = InverseJacobianMatrix(2,0) * ShapeFunctionsDerivativesToKsi(i,0) +
+			InverseJacobianMatrix(3,0) * ShapeFunctionsDerivativesToEta(i,0);
 
-		dN_dy(1,i) = JacobianMatrix(2,1) * ShapeFunctionsDerivativesToKsi(i,1) +
-			JacobianMatrix(3,1) * ShapeFunctionsDerivativesToEta(i,1);
+		dN_dy(1,i) = InverseJacobianMatrix(2,1) * ShapeFunctionsDerivativesToKsi(i,1) +
+			InverseJacobianMatrix(3,1) * ShapeFunctionsDerivativesToEta(i,1);
 
-		dN_dy(2,i) = JacobianMatrix(2,2) * ShapeFunctionsDerivativesToKsi(i,2) +
-			JacobianMatrix(3,2) * ShapeFunctionsDerivativesToEta(i,2);
+		dN_dy(2,i) = InverseJacobianMatrix(2,2) * ShapeFunctionsDerivativesToKsi(i,2) +
+			InverseJacobianMatrix(3,2) * ShapeFunctionsDerivativesToEta(i,2);
 
-		dN_dy(3,i) = JacobianMatrix(2,3) * ShapeFunctionsDerivativesToKsi(i,3) +
-			JacobianMatrix(3,3) * ShapeFunctionsDerivativesToEta(i,3);
+		dN_dy(3,i) = InverseJacobianMatrix(2,3) * ShapeFunctionsDerivativesToKsi(i,3) +
+			InverseJacobianMatrix(3,3) * ShapeFunctionsDerivativesToEta(i,3);
 	}
 }
 
@@ -539,10 +539,10 @@ void Element::calculate_c_ro_NN_det()
 	{
 		for (int j = 0; j < matrix_size; j++)
 		{
-			c_ro_NN_det_1pc(i, j) = ShapeFunctions[0]->N(i) * ShapeFunctions[0]->N(j) * JacobianDet[0] * specific_heat * ro;
-			c_ro_NN_det_2pc(i, j) = ShapeFunctions[1]->N(i) * ShapeFunctions[1]->N(j) * JacobianDet[1] * specific_heat * ro;
-			c_ro_NN_det_3pc(i, j) = ShapeFunctions[2]->N(i) * ShapeFunctions[2]->N(j) * JacobianDet[2] * specific_heat * ro;
-			c_ro_NN_det_4pc(i, j) = ShapeFunctions[3]->N(i) * ShapeFunctions[3]->N(j) * JacobianDet[3] * specific_heat * ro;
+			c_ro_NN_det_1pc(i, j) = ShapeFunctions[0]->N(i) * ShapeFunctions[0]->N(j) * JacobianDet[0] * specific_heat * density;
+			c_ro_NN_det_2pc(i, j) = ShapeFunctions[1]->N(i) * ShapeFunctions[1]->N(j) * JacobianDet[1] * specific_heat * density;
+			c_ro_NN_det_3pc(i, j) = ShapeFunctions[2]->N(i) * ShapeFunctions[2]->N(j) * JacobianDet[2] * specific_heat * density;
+			c_ro_NN_det_4pc(i, j) = ShapeFunctions[3]->N(i) * ShapeFunctions[3]->N(j) * JacobianDet[3] * specific_heat * density;
 		}
 	}
 }
@@ -664,28 +664,27 @@ void Element::calculate_pow_pc()
 
 void Element::calculate_pow_sum_and_pow_P()
 {
-	double pow1_detJ = (Nodes[1]->x - Nodes[0]->x) / 2;
-	double pow2_detJ = (Nodes[2]->y - Nodes[1]->y) / 2;
-	double pow3_detJ = (Nodes[2]->x - Nodes[3]->x) / 2;
-	double pow4_detJ = (Nodes[3]->y - Nodes[0]->y) / 2;
-
 	for (int i = 0; i < matrix_size; i++)
 	{
 		for (int j = 0; j < matrix_size; j++)
 		{
 			if (Nodes[0]->BC == true && Nodes[1]->BC == true) {
+				double pow1_detJ = (Nodes[1]->x - Nodes[0]->x) / 2;
 				pow1_sum(i, j) = (pow1_pc1(i, j) + pow1_pc2(i, j))*pow1_detJ;
 				pow1_P(i) += ambient_temp * (pow1_pc1(i, j) + pow1_pc2(i, j)) * pow1_detJ;
 			}
 			if (Nodes[1]->BC == true && Nodes[2]->BC == true) {
+				double pow2_detJ = (Nodes[2]->y - Nodes[1]->y) / 2;
 				pow2_sum(i, j) = (pow2_pc1(i, j) + pow2_pc2(i, j))*pow2_detJ;
 				pow2_P(i) += ambient_temp * (pow2_pc1(i, j) + pow2_pc2(i, j)) * pow2_detJ;
 			}
 			if (Nodes[2]->BC == true && Nodes[3]->BC == true) {
+				double pow3_detJ = (Nodes[2]->x - Nodes[3]->x) / 2;
 				pow3_sum(i, j) = (pow3_pc1(i, j) + pow3_pc2(i, j))*pow3_detJ;
 				pow3_P(i) += ambient_temp * (pow3_pc1(i, j) + pow3_pc2(i, j)) * pow3_detJ;
 			}
 			if (Nodes[3]->BC == true && Nodes[0]->BC == true) {
+				double pow4_detJ = (Nodes[3]->y - Nodes[0]->y) / 2;
 				pow4_sum(i, j) = (pow4_pc1(i, j) + pow4_pc2(i, j))*pow4_detJ;
 				pow4_P(i) += ambient_temp * (pow4_pc1(i, j) + pow4_pc2(i, j)) * pow4_detJ;
 			}

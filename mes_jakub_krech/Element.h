@@ -21,15 +21,15 @@ public:
 
 	std::vector<Node*> Nodes;
 	std::vector<ShapeFunction*> ShapeFunctions;
-	std::vector<InterpolationCoordinates*> InterpolCoord;
+	//std::vector<InterpolationCoordinates*> InterpolCoord;
 
-	Eigen::Matrix<double, matrix_size, matrix_size> ShapeFunctionsDerivativesToKsi; //[shapeFunc][node], to jest wektor dla wartosc N1/dKSI, N2/dKSI itd
-	Eigen::Matrix<double, matrix_size, matrix_size> ShapeFunctionsDerivativesToEta; //[shapeFunc][node], to jest wektor dla wartosc N1/dETA, N2/dETA itd
-
-	Eigen::Matrix<double, matrix_size, matrix_size> JacobianMatrixOne;
-	Eigen::Vector4d JacobianDet;
+	Eigen::Matrix<double, matrix_size, matrix_size> ShapeFunctionsDerivativesToKsi;
+	Eigen::Matrix<double, matrix_size, matrix_size> ShapeFunctionsDerivativesToEta;
 
 	Eigen::Matrix<double, matrix_size, matrix_size> JacobianMatrix;
+	Eigen::Vector4d JacobianDet;
+	Eigen::Matrix<double, matrix_size, matrix_size> InverseJacobianMatrix;
+
 	Eigen::Matrix<double, matrix_size, matrix_size> dN_dx;
 	Eigen::Matrix<double, matrix_size, matrix_size> dN_dy;
 
@@ -100,11 +100,11 @@ public:
 		Eigen::Matrix<double, matrix_size, matrix_size>&);
 	~Element();
 
-	void calculateInterpolationForEachNode();
+	//void calculateInterpolationForEachNode();
 
-	void calculateJacobianMatrixOne();
-	void calculateJacobianDet();
 	void calculateJacobianMatrix();
+	void calculateJacobianDet();
+	void calculateInverseJacobianMatrix();
 
 	void calculate_dn_dx();
 	void calculate_dn_dy();
