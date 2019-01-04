@@ -22,7 +22,7 @@
 #define        calculate_pow_sum_debug_logging 0
 #define          calculate_pow_P_debug_logging 0
 #define    calculate_Matrix_H_BC_debug_logging 0
-#define       calculate_Matrix_P_debug_logging 0
+#define       calculate_Vector_P_debug_logging 0
 #define calculate_Matrix_H_Final_debug_logging 0
 
 #define ksi_global 1/sqrt(3)
@@ -71,7 +71,7 @@ Element::Element(
 	calculate_pow_pc_N();
 	calculate_pow_pc();
 	calculate_pow_sum_and_pow_P();
-	calculate_Matrix_P();
+	calculate_Vector_P();
 	calculate_Matrix_H_BC();
 	
 	calculate_Matrix_H_Final();
@@ -322,10 +322,10 @@ void Element::print()
 	}
 
 
-	if (calculate_Matrix_P_debug_logging)
+	if (calculate_Vector_P_debug_logging)
 	{
 		std::cout << "-------------------Matrix P-------------------\n" <<
-			std::fixed << Matrix_P <<
+			std::fixed << Vector_P <<
 			"\n----------------------------------------------\n\n";
 	}
 
@@ -692,11 +692,11 @@ void Element::calculate_pow_sum_and_pow_P()
 	}
 }
 
-void Element::calculate_Matrix_P()
+void Element::calculate_Vector_P()
 {
 	for (int i = 0; i < matrix_size; i++)
 	{
-		Matrix_P(i) = pow1_P(i) + pow2_P(i) +
+		Vector_P(i) = pow1_P(i) + pow2_P(i) +
 			pow3_P(i) + pow4_P(i);
 	}
 }

@@ -24,7 +24,7 @@ public:
 
 	Eigen::Matrix<double, matrix_size*matrix_size, matrix_size*matrix_size> Global_Matrix_H;
 	Eigen::Matrix<double, matrix_size*matrix_size, matrix_size*matrix_size> Global_Matrix_C;
-	Eigen::Matrix<double, 16, 1> Global_Matrix_P;
+	Eigen::Matrix<double, 16, 1> Global_Vector_P;
 
 	static Grid* createGridFromDataFile(std::string fileName);
 

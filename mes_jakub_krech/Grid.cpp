@@ -248,7 +248,7 @@ void Grid::calculate_global_matrix_P()
 	for (const auto &x : elements) {
 		Eigen::Vector4i ID = { x->Nodes[0]->id, x->Nodes[1]->id, x->Nodes[2]->id, x->Nodes[3]->id };
 		for (int i = 0; i < matrix_size; i++) {
-			Global_Matrix_P(ID(i) - 1) += x->Matrix_P(i);
+			Global_Vector_P(ID(i) - 1) += x->Vector_P(i);
 		}
 	}
 }
@@ -256,8 +256,8 @@ void Grid::calculate_global_matrix_P()
 void Grid::print_global_matrix_P()
 {
 	const Eigen::IOFormat fmt(3);
-	std::cout << "----------------Global_Matrix_P--------------- \n" <<
-		std::fixed << Global_Matrix_P.format(fmt) <<
+	std::cout << "----------------Global_Vector_P--------------- \n" <<
+		std::fixed << Global_Vector_P.format(fmt) <<
 		"\n----------------------------------------------\n\n";
 }
 
@@ -273,7 +273,7 @@ void Grid::calculate_next_iterations(int iterations)
 			std::fixed << temporaryH <<
 			"\n----------------------------------------------\n\n";
 
-		Eigen::Matrix<double, 16, 1> temporaryP = Global_Matrix_P;
+		Eigen::Matrix<double, 16, 1> temporaryP = Global_Vector_P;
 		for (int i = 0; i < matrix_size*matrix_size; i++) {
 			for (int j = 0; j < matrix_size*matrix_size; j++) {
 				temporaryP(i) += ((Global_Matrix_C(i, j) / (simulation_step_time)) * nodes[j]->temperature);

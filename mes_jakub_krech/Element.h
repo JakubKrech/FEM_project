@@ -88,7 +88,7 @@ public:
 	Eigen::Vector4d pow3_P;
 	Eigen::Vector4d pow4_P;
 
-	Eigen::Vector4d Matrix_P;
+	Eigen::Vector4d Vector_P;
 
 	Eigen::Matrix<double, matrix_size, matrix_size> Matrix_H_BC;
 	Eigen::Matrix<double, matrix_size, matrix_size> Matrix_H_Final;
@@ -119,7 +119,7 @@ public:
 	void calculate_pow_pc_N();
 	void calculate_pow_pc();
 	void calculate_pow_sum_and_pow_P();
-	void calculate_Matrix_P();
+	void calculate_Vector_P();
 
 	void calculate_Matrix_H_BC();
 	void calculate_Matrix_H_Final();
